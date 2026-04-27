@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Brain Cube – Bloxorz Puzzle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #ffede4; font-family: 'Play', sans-serif; transition: background-color 1.4s ease; }
+
+        /* ── HUD ── */
+        #ui {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #level-banner {
+            margin-top: 20px;
+            background: rgba(255,251,242,0.72);
+            border: 1px solid rgba(216,200,177,0.55);
+            border-radius: 6px;
+            padding: 5px 24px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #9a6070;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            backdrop-filter: blur(8px);
+        }
+
+        #moves-counter {
+            margin-top: 7px;
+            font-size: 0.72rem;
+            font-weight: 400;
+            color: rgba(154,96,112,0.75);
+            letter-spacing: 1px;
+        }
+
+        /* ── OVERLAYS communs ── */
+        #win-overlay,
+        #lose-overlay {
+            position: fixed;
+            inset: 0;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 12px;
+            backdrop-filter: blur(12px);
+        }
+
+        /* Win overlay – affiché par classe */
+        #win-overlay {
+            display: none;
+            pointer-events: none;
+            background: rgba(255,245,250,0.82);
+        }
+        #win-overlay.show  { display: flex; pointer-events: all; }
+
+        /* Lose overlay – toujours dans le DOM, transition opacité */
+        #lose-overlay {
+            display: flex;
+            pointer-events: none;
+            background: rgba(28,12,18,0.88);
+            opacity: 0;
+            transition: opacity 0.38s ease;
+        }
+        #lose-overlay.show { opacity: 1; pointer-events: all; }
+
+        /* ── WIN ── */
+        #win-title {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: #c24d8e;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            animation: pop 0.35s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        #win-sub {
+            font-size: 0.88rem;
+            color: #a0607a;
+            letter-spacing: 0.5px;
+        }
+        #btn-next {
+            pointer-events: all;
+            margin-top: 10px;
+            padding: 10px 32px;
+            border: 1.5px solid #c24d8e;
+            border-radius: 6px;
+            background: transparent;
+            color: #c24d8e;
+            font-family: 'Play', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.18s, color 0.18s;
+        }
+        #btn-next:hover {
+            background: #c24d8e;
+            color: #fff;
+        }
+
+        /* ── LOSE ── */
+        #lose-title {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: #ff7070;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            animation: pop 0.35s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        #lose-sub {
+            font-size: 0.88rem;
+            color: rgba(255,160,160,0.8);
+            letter-spacing: 0.5px;
+        }
+        #btn-retry {
+            pointer-events: all;
+            margin-top: 10px;
+            padding: 10px 32px;
+            border: 1.5px solid #ff7070;
+            border-radius: 6px;
+            background: transparent;
+            color: #ff7070;
+            font-family: 'Play', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.18s, color 0.18s;
+        }
+        #btn-retry:hover {
+            background: #ff7070;
+            color: #fff;
+        }
+
+        /* ── CONTROLS HINT ── */
+        #controls-hint {
+            position: fixed;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.68rem;
+            font-weight: 400;
+            letter-spacing: 1.2px;
+            color: rgba(154,96,112,0.7);
+            background: rgba(255,251,242,0.55);
+            border: 1px solid rgba(216,200,177,0.4);
+            border-radius: 6px;
+            padding: 4px 18px;
+            backdrop-filter: blur(6px);
+            white-space: nowrap;
+        }
+
+        @keyframes pop {
+            from { transform: scale(0.7); opacity: 0; }
+            to   { transform: scale(1);   opacity: 1; }
+        }
+
+        /* ── SCORE FORM (win overlay) ── */
+        #score-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        #input-username {
+            padding: 6px 14px;
+            border: 1.5px solid rgba(194,77,142,0.4);
+            border-radius: 6px;
+            background: rgba(255,251,242,0.8);
+            font-family: 'Play', sans-serif;
+            font-size: 0.82rem;
+            color: #9a6070;
+            outline: none;
+            width: 180px;
+            text-align: center;
+        }
+        #input-username:focus { border-color: #c24d8e; }
+        #input-username.error { border-color: #ff7070; }
+        .score-form-btns { display: flex; gap: 8px; }
+        #btn-submit-score {
+            padding: 7px 22px;
+            border: 1.5px solid #c24d8e;
+            border-radius: 6px;
+            background: #c24d8e;
+            color: #fff;
+            font-family: 'Play', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: opacity 0.18s;
+        }
+        #btn-submit-score:hover { opacity: 0.85; }
+        #btn-submit-score:disabled { opacity: 0.5; cursor: default; }
+        #btn-skip-score {
+            padding: 7px 22px;
+            border: 1.5px solid rgba(154,96,112,0.35);
+            border-radius: 6px;
+            background: transparent;
+            color: rgba(154,96,112,0.7);
+            font-family: 'Play', sans-serif;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: border-color 0.18s, color 0.18s;
+        }
+        #btn-skip-score:hover { border-color: #c24d8e; color: #c24d8e; }
+        #win-score { color: #c24d8e; font-weight: 700; }
+
+        /* ── LEADERBOARD (win overlay) ── */
+        #leaderboard {
+            margin-top: 10px;
+            min-width: 220px;
+            font-size: 0.74rem;
+            color: #9a6070;
+        }
+        #leaderboard h3 {
+            font-size: 0.72rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            color: #c24d8e;
+        }
+        #leaderboard ol {
+            list-style: none;
+            padding: 0;
+        }
+        #leaderboard li {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(194,77,142,0.15);
+        }
+        #leaderboard .lb-empty {
+            text-align: center;
+            opacity: 0.55;
+            font-style: italic;
+        }
+
+        /* ── DÉCO ARRIÈRE-PLAN ── */
+        .deco {
+            position: fixed;
+            background: url('/Group_29.png') center/contain no-repeat;
+            pointer-events: none;
+            z-index: 100;
+        }
+.deco-1  { width: 320px; height: 320px; top: -60px;  left: -80px;  opacity: 0.40; }
+        .deco-2  { width: 180px; height: 180px; top: 12%;    right: 4%;    opacity: 0.15; }
+        .deco-3  { width: 120px; height: 120px; top: 42%;    left: 2%;     opacity: 0.25; transform: rotate(15deg); }
+        .deco-4  { width: 130px; height: 130px; bottom: 8%;  left: 12%;    opacity: 0.21; transform: rotate(-15deg); }
+        .deco-5  { width: 200px; height: 200px; bottom: -40px; right: -30px; opacity: 0.28; transform: rotate(40deg); }
+        .deco-6  { width: 100px; height: 100px; top: 28%;    right: 18%;   opacity: 0.40; transform: rotate(-30deg); }
+        .deco-7  { width: 160px; height: 160px; bottom: 35%; left: -50px;  opacity: 0.18; transform: rotate(25deg); }
+        .deco-8  { width: 150px; height: 150px; top: 62%;    right: 6%;    opacity: 0.30; transform: rotate(-20deg); }
+    </style>
+</head>
+<body>
+    <!-- décorations arrière-plan -->
+    <div class="deco deco-1" aria-hidden="true"></div>
+    <div class="deco deco-2" aria-hidden="true"></div>
+    <div class="deco deco-3" aria-hidden="true"></div>
+    <div class="deco deco-4" aria-hidden="true"></div>
+    <div class="deco deco-5" aria-hidden="true"></div>
+    <div class="deco deco-6" aria-hidden="true"></div>
+    <div class="deco deco-7" aria-hidden="true"></div>
+    <div class="deco deco-8" aria-hidden="true"></div>
+
+    <canvas id="canvas"></canvas>
+
+    <div id="ui">
+        <div id="level-banner">Niveau <span id="level-num">1</span></div>
+        <div id="moves-counter">Déplacements : <span id="moves">0</span></div>
+    </div>
+
+    <div id="win-overlay">
+        <div id="win-title">Niveau terminé</div>
+        <div id="win-sub">Résolu en <span id="win-moves">0</span> déplacements · <span id="win-score">0</span> pts</div>
+        <div id="score-form">
+            <input type="text" id="input-username" placeholder="Ton pseudo" maxlength="50" autocomplete="nickname">
+            <div class="score-form-btns">
+                <button id="btn-submit-score">Enregistrer</button>
+                <button id="btn-skip-score">Passer</button>
+            </div>
+        </div>
+        <div id="leaderboard">
+            <h3>Top scores</h3>
+            <ol id="lb-list"><li class="lb-empty">Chargement…</li></ol>
+        </div>
+        <button id="btn-next">Niveau suivant →</button>
+    </div>
+
+    <div id="lose-overlay">
+        <div id="lose-title">Perdu</div>
+        <div id="lose-sub">Le bloc est tombé dans le vide.</div>
+    </div>
+
+    <div id="controls-hint">↑ ↓ ← → &nbsp;déplacer &nbsp;·&nbsp; R &nbsp;recommencer</div>
+
+    <script type="module" src="/main.js"></script>
+</body>
+</html>

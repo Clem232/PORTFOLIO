@@ -781,56 +781,14 @@
             to   { transform: translateY(0);    opacity: 1; }
         }
 
-        /* ── SCORE FORM (win overlay) ── */
-        #score-form {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        #input-username {
-            padding: 6px 14px;
-            border: 1.5px solid rgba(194,77,142,0.4);
-            border-radius: 6px;
-            background: rgba(255,251,242,0.8);
-            font-family: 'Play', sans-serif;
-            font-size: 0.82rem;
+        /* ── SCORE STATUS (win overlay) ── */
+        #score-status {
+            font-size: 0.8rem;
+            min-height: 1.2em;
+            margin-top: 6px;
             color: #9a6070;
-            outline: none;
-            width: 180px;
-            text-align: center;
+            letter-spacing: 0.3px;
         }
-        #input-username:focus { border-color: #c24d8e; }
-        #input-username.error { border-color: #ff7070; }
-        .score-form-btns { display: flex; gap: 8px; }
-        #btn-submit-score {
-            padding: 7px 22px;
-            border: 1.5px solid #c24d8e;
-            border-radius: 6px;
-            background: #c24d8e;
-            color: #fff;
-            font-family: 'Play', sans-serif;
-            font-size: 0.78rem;
-            font-weight: 700;
-            letter-spacing: 1px;
-            cursor: pointer;
-            transition: opacity 0.18s;
-        }
-        #btn-submit-score:hover { opacity: 0.85; }
-        #btn-submit-score:disabled { opacity: 0.5; cursor: default; }
-        #btn-skip-score {
-            padding: 7px 22px;
-            border: 1.5px solid rgba(154,96,112,0.35);
-            border-radius: 6px;
-            background: transparent;
-            color: rgba(154,96,112,0.7);
-            font-family: 'Play', sans-serif;
-            font-size: 0.78rem;
-            cursor: pointer;
-            transition: border-color 0.18s, color 0.18s;
-        }
-        #btn-skip-score:hover { border-color: #c24d8e; color: #c24d8e; }
         #win-score { color: #c24d8e; font-weight: 700; }
 
         /* ── LEADERBOARD (win overlay) ── */
@@ -996,14 +954,7 @@
     <div id="win-overlay">
         <div id="win-title">Niveau terminé</div>
         <div id="win-sub">Résolu en <span id="win-moves">0</span> déplacements · <span id="win-score">0</span> pts</div>
-        <div id="score-form">
-            <input type="text" id="input-username" placeholder="Ton pseudo" maxlength="50" autocomplete="nickname">
-            <div id="score-message" class="form-message"></div>
-            <div class="score-form-btns">
-                <button id="btn-submit-score">Enregistrer</button>
-                <button id="btn-skip-score">Passer</button>
-            </div>
-        </div>
+        <div id="score-status"></div>
         <div id="leaderboard">
             <h3>Top scores</h3>
             <ol id="lb-list"><li class="lb-empty">Chargement…</li></ol>

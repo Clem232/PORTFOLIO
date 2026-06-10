@@ -395,29 +395,33 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.08;
+renderer.toneMappingExposure = 0.88;
 renderer.physicallyCorrectLights = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
 
 // ─── LUMIERES ────────────────────────────────────────
-scene.add(new THREE.AmbientLight(0xffffff, 0.45));
-scene.add(new THREE.HemisphereLight(0xfff4fb, 0xbcc3d8, 0.55));
-const dirLight = new THREE.DirectionalLight(0xfff0f8, 1.2);
-dirLight.position.set(6, 14, 8);
+// Ambiance sombre — très peu de lumière de remplissage
+scene.add(new THREE.AmbientLight(0x1a0f2e, 0.22));
+scene.add(new THREE.HemisphereLight(0x2d1240, 0x080410, 0.16));
+
+// Lampe principale — haut droite, lumière chaude type tungstène
+const dirLight = new THREE.DirectionalLight(0xffd8a0, 2.4);
+dirLight.position.set(16, 24, 6);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.set(2048, 2048);
-dirLight.shadow.radius = 3.5;
+dirLight.shadow.radius = 5;
 dirLight.shadow.bias = -0.00025;
 dirLight.shadow.normalBias = 0.02;
 Object.assign(dirLight.shadow.camera, {
-  left: -16, right: 16, bottom: -16, top: 16, near: 0.5, far: 60,
+  left: -14, right: 14, bottom: -14, top: 14, near: 0.5, far: 70,
 });
 scene.add(dirLight);
 
-const rimLight = new THREE.DirectionalLight(0xb9e3ff, 0.33);
-rimLight.position.set(-8, 9, -6);
-scene.add(rimLight);
+// Léger fill frontal pour ne pas noircir complètement les faces avant
+const fillLight = new THREE.DirectionalLight(0x6050a0, 0.14);
+fillLight.position.set(-4, 5, 12);
+scene.add(fillLight);
 
 const contactShadowPlane = new THREE.Mesh(
   new THREE.PlaneGeometry(1, 1),
@@ -502,11 +506,6 @@ const $loseOverlay = document.getElementById('lose-overlay');
 const $gameoverOverlay = document.getElementById('gameover-overlay');
 const $pauseMenu = document.getElementById('pause-menu');
 const $mainMenu = document.getElementById('main-menu');
-const $scoreForm  = document.getElementById('score-form');
-const $scoreMessage = document.getElementById('score-message');
-const $inputUsername = document.getElementById('input-username');
-const $btnSubmitScore = document.getElementById('btn-submit-score');
-const $btnSkipScore = document.getElementById('btn-skip-score');
 const $btnNext    = document.getElementById('btn-next');
 const $btnPauseResume = document.getElementById('btn-pause-resume');
 const $btnPauseRestart = document.getElementById('btn-pause-restart');
@@ -520,13 +519,11 @@ const $levelViewport = document.getElementById('level-viewport');
 const $levelPrev = document.getElementById('level-prev');
 const $levelNext = document.getElementById('level-next');
 const $levelPage = document.getElementById('level-page');
-const $leaderboard = document.getElementById('leaderboard');
-const $heartsEl   = document.querySelectorAll('#lives-display .heart');
+const $leaderboard  = document.getElementById('leaderboard');
+const $scoreStatus  = document.getElementById('score-status');
+const $heartsEl     = document.querySelectorAll('#lives-display .heart');
 
 const MENU_UNLOCK_KEY = 'bc_max_unlocked_level';
-
-// Charger le pseudo sauvegardé
-$inputUsername.value = localStorage.getItem('bc_username') || '';
 
 $btnNext.addEventListener('click', () => {
   levelIdx++;
@@ -534,52 +531,6 @@ $btnNext.addEventListener('click', () => {
 });
 const $btnRetry = document.getElementById('btn-retry');
 if ($btnRetry) $btnRetry.addEventListener('click', () => buildLevel());
-
-$btnSubmitScore.addEventListener('click', async () => {
-  if ($scoreMessage) {
-    $scoreMessage.textContent = '';
-    $scoreMessage.style.color = '#c24d8e';
-  }
-
-  const username = $inputUsername.value.trim();
-  if (!username || username.length < 3) {
-    $inputUsername.classList.add('error');
-    if ($scoreMessage) $scoreMessage.textContent = 'Pseudo trop court (min. 3 caractères)';
-    $inputUsername.focus();
-    return;
-  }
-
-  $inputUsername.classList.remove('error');
-  localStorage.setItem('bc_username', username);
-  $btnSubmitScore.disabled = true;
-  if ($btnSkipScore) $btnSkipScore.disabled = true;
-
-  const ok = await submitScore(username);
-  if (!ok) {
-    if ($scoreMessage) $scoreMessage.textContent = 'Erreur lors de l\'enregistrement du score.';
-    $btnSubmitScore.disabled = false;
-    if ($btnSkipScore) $btnSkipScore.disabled = false;
-    return;
-  }
-
-  if ($scoreMessage) {
-    $scoreMessage.style.color = '#2f8f5d';
-    $scoreMessage.textContent = 'Score enregistré !';
-  }
-  setTimeout(() => {
-    showLeaderboard();
-    $btnSubmitScore.disabled = false;
-    if ($btnSkipScore) $btnSkipScore.disabled = false;
-  }, 650);
-});
-
-$btnSkipScore.addEventListener('click', () => {
-  if ($scoreMessage) {
-    $scoreMessage.textContent = '';
-    $scoreMessage.style.color = '#c24d8e';
-  }
-  showLeaderboard();
-});
 
 document.getElementById('btn-gameover-restart').addEventListener('click', () => {
   $gameoverOverlay.classList.remove('show');
@@ -723,7 +674,6 @@ $startForm.addEventListener('submit', async (e) => {
     const data = await res.json().catch(() => ({}));
     if (data.token) localStorage.setItem('bc_token', data.token);
     localStorage.setItem('bc_username', username);
-    $inputUsername.value = username;
 
     if (_authTab === 'register') {
       if ($startSuccess) $startSuccess.textContent = 'Inscription réussie ! Connecte-toi pour jouer.';
@@ -740,7 +690,6 @@ $startForm.addEventListener('submit', async (e) => {
   } catch {
     // Backend indisponible -> jouer quand même
     localStorage.setItem('bc_username', username);
-    $inputUsername.value = username;
     if ($startSuccess) $startSuccess.textContent = 'Mode local activé (back indisponible).';
     setTimeout(() => _dismissStartScreen(), 420);
   } finally {
@@ -1053,17 +1002,9 @@ function buildLevel() {
   updateLivesDisplay();
   updateHUD();
   renderLevelCarousel();
-  // Réinitialise le formulaire de score
-  $scoreForm.style.display = '';
   $leaderboard.style.display = 'none';
   $btnNext.style.display = 'none';
-  $inputUsername.classList.remove('error');
-  $btnSubmitScore.disabled = false;
-  if ($btnSkipScore) $btnSkipScore.disabled = false;
-  if ($scoreMessage) {
-    $scoreMessage.textContent = '';
-    $scoreMessage.style.color = '#c24d8e';
-  }
+  if ($scoreStatus) $scoreStatus.textContent = '';
 
   // ─ Transition couleur de fond
   _bgStart.copy(_bgCurrent);
@@ -1641,10 +1582,10 @@ function tickWin(delta) {
   if (t >= 1) {
     isWinAnim = false;
     $winMoves.textContent = moveCount;
-    const pts = computeScore();
-    $winScore.textContent = pts;
+    $winScore.textContent = computeScore();
     $winOverlay.classList.add('show');
-    $btnNext.style.display = '';  // Montrer immédiatement le bouton "Niveau suivant"
+    $btnNext.style.display = '';
+    autoSubmitAndShowLeaderboard();
   }
 }
 
@@ -1656,28 +1597,43 @@ function computeScore() {
   return Math.max(10, (levelIdx + 1) * 500 - moveCount * 10);
 }
 
-function showLeaderboard() {
-  $scoreForm.style.display = 'none';
-  $leaderboard.style.display = '';
-  $btnNext.style.display = '';
-  fetchLeaderboard();
-}
+async function autoSubmitAndShowLeaderboard() {
+  const username = localStorage.getItem('bc_username');
 
-async function submitScore(username) {
-  try {
-    const res = await fetch(`${BACK_URL}/api/scores`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username,
-        points: computeScore(),
-        levelReached: levelIdx + 1,
-      }),
-    });
-    return res.ok;
-  } catch {
-    return false;
+  if (username) {
+    if ($scoreStatus) {
+      $scoreStatus.textContent = '…';
+      $scoreStatus.style.color = '#9a6070';
+    }
+    try {
+      const res = await fetch(`${BACK_URL}/api/scores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          points: computeScore(),
+          levelReached: levelIdx + 1,
+        }),
+      });
+      if ($scoreStatus) {
+        if (res.ok) {
+          $scoreStatus.textContent = `✓ Score enregistré pour ${username}`;
+          $scoreStatus.style.color = '#2f8f5d';
+        } else {
+          $scoreStatus.textContent = '⚠ Score non enregistré';
+          $scoreStatus.style.color = '#e04040';
+        }
+      }
+    } catch {
+      if ($scoreStatus) {
+        $scoreStatus.textContent = '⚠ Back non disponible';
+        $scoreStatus.style.color = '#e04040';
+      }
+    }
   }
+
+  $leaderboard.style.display = '';
+  fetchLeaderboard();
 }
 
 async function fetchLeaderboard() {
@@ -1693,8 +1649,11 @@ async function fetchLeaderboard() {
     }
 
     $lbList.innerHTML = scores
-      .slice(0, 5)
-      .map((s, i) => `<li><span>${i + 1}. ${s.username}</span><span>${s.points} pts</span></li>`)
+      .slice(0, 10)
+      .map((s, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+        return `<li><span>${medal} ${s.username}</span><span>${s.points} pts · Niv.${s.levelReached}</span></li>`;
+      })
       .join('');
   } catch {
     $lbList.innerHTML = '<li class="lb-empty">Back non disponible.</li>';
